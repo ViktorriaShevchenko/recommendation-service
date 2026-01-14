@@ -12,6 +12,8 @@ public class TopSavingRuleSet implements RecommendationRuleSet {
 
     private final RecommendationsRepository repository;
 
+    private static final UUID TOP_SAVING_ID = UUID.fromString("59efc529-2fff-41af-baff-90ccd7402925");
+
     public TopSavingRuleSet(RecommendationsRepository repository) {
         this.repository = repository;
     }
@@ -24,6 +26,7 @@ public class TopSavingRuleSet implements RecommendationRuleSet {
 
         if (isEligible) {
             return Optional.of(new RecommendationDTO(
+                    TOP_SAVING_ID,
                     "Top Saving",
                     "Откройте свою собственную «Копилку» с нашим банком! «Копилка» — это " +
                     "уникальный банковский инструмент, который поможет вам легко и удобно " +

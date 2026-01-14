@@ -12,6 +12,8 @@ public class Invest500RuleSet implements RecommendationRuleSet {
 
     private final RecommendationsRepository repository;
 
+    private static final UUID INVEST_500_ID = UUID.fromString("147f6a0f-3b91-413b-ab99-87f081d60d5a");
+
     public Invest500RuleSet(RecommendationsRepository repository) {
         this.repository = repository;
     }
@@ -24,6 +26,7 @@ public class Invest500RuleSet implements RecommendationRuleSet {
 
         if (isEligible) {
             return Optional.of(new RecommendationDTO(
+                    INVEST_500_ID,
                     "Invest 500",
                     "Откройте свой путь к успеху с индивидуальным инвестиционным " +
                     "счетом (ИИС) от нашего банка! Воспользуйтесь налоговыми льготами и " +

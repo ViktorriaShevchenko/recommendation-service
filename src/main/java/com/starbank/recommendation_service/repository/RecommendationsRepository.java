@@ -22,8 +22,10 @@ public class RecommendationsRepository {
     public boolean hasDebitProduct(UUID userId) {
         Boolean result = recommendationsJdbcTemplate.queryForObject(
                 """
-                SELECT COUNT(*) > 0 FROM products p
-                WHERE p.user_id = ? AND p.type = 'DEBIT'
+                SELECT COUNT(*) > 0 
+                FROM transactions t 
+                JOIN products p ON t.product_id = p.id 
+                WHERE t.user_id = ? AND p.type = 'DEBIT'
                 """,
                 Boolean.class,
                 userId.toString());
@@ -34,8 +36,10 @@ public class RecommendationsRepository {
     public boolean hasNoInvestProducts(UUID userId) {
         Boolean result = recommendationsJdbcTemplate.queryForObject(
                 """
-                SELECT COUNT(*) = 0 FROM products p
-                WHERE p.user_id = ? AND p.type = 'INVEST'
+                SELECT COUNT(*) = 0 
+                FROM transactions t 
+                JOIN products p ON t.product_id = p.id 
+                WHERE t.user_id = ? AND p.type = 'INVEST'
                 """,
                 Boolean.class,
                 userId.toString());
@@ -47,9 +51,11 @@ public class RecommendationsRepository {
         Boolean result = recommendationsJdbcTemplate.queryForObject(
                 """
                 SELECT COALESCE(SUM(t.amount), 0) > 1000
-                FROM transactions t JOIN products p
-                ON t.product_id = p.id WHERE p.user_id = ?
-                AND p.type = 'SAVING' AND t.type = 'DEPOSIT'
+                FROM transactions t 
+                JOIN products p ON t.product_id = p.id 
+                WHERE t.user_id = ? 
+                AND p.type = 'SAVING' 
+                AND t.type = 'DEPOSIT'
                 """,
                 Boolean.class,
                 userId.toString());
@@ -71,8 +77,9 @@ public class RecommendationsRepository {
         Boolean result = recommendationsJdbcTemplate.queryForObject(
                 """
                 SELECT COALESCE(SUM(t.amount), 0) >= 50000
-                FROM transactions t JOIN products p ON t.product_id = p.id
-                WHERE p.user_id = ?
+                FROM transactions t 
+                JOIN products p ON t.product_id = p.id
+                WHERE t.user_id = ?
                 AND p.type IN ('DEBIT', 'SAVING')
                 AND t.type = 'DEPOSIT'
                 """,
@@ -88,10 +95,10 @@ public class RecommendationsRepository {
                 """
                 SELECT
                     COALESCE(SUM(CASE WHEN t.type = 'DEPOSIT' THEN t.amount ELSE 0 END), 0) >
-                    COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' THEN t.amount ELSE 0 END), 0)
+                    COALESCE(SUM(CASE WHEN t.type = 'WITHDRAWAL' THEN t.amount ELSE 0 END), 0)
                 FROM transactions t
                 JOIN products p ON t.product_id = p.id
-                WHERE p.user_id = ?
+                WHERE t.user_id = ?
                 AND p.type = 'DEBIT'
                 """,
                 Boolean.class,
@@ -113,8 +120,9 @@ public class RecommendationsRepository {
         Boolean result = recommendationsJdbcTemplate.queryForObject(
                 """
                 SELECT COUNT(*) = 0
-                FROM products p
-                WHERE p.user_id = ? AND p.type = 'CREDIT'
+                FROM transactions t 
+                JOIN products p ON t.product_id = p.id 
+                WHERE t.user_id = ? AND p.type = 'CREDIT'
                 """,
                 Boolean.class,
                 userId.toString());
@@ -128,9 +136,9 @@ public class RecommendationsRepository {
                 SELECT COALESCE(SUM(t.amount), 0) > 100000
                 FROM transactions t
                 JOIN products p ON t.product_id = p.id
-                WHERE p.user_id = ?
+                WHERE t.user_id = ?
                 AND p.type = 'DEBIT'
-                AND t.type = 'EXPENSE'
+                AND t.type = 'WITHDRAWAL'
                 """,
                 Boolean.class,
                 userId.toString());
