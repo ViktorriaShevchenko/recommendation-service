@@ -12,6 +12,8 @@ public class SimpleCreditRuleSet implements RecommendationRuleSet {
 
     private final RecommendationsRepository repository;
 
+    private static final UUID SIMPLE_CREDIT_ID = UUID.fromString("ab138afb-f3ba-4a93-b74f-0fcee86d447f");
+
     public SimpleCreditRuleSet(RecommendationsRepository repository) {
         this.repository = repository;
     }
@@ -24,6 +26,7 @@ public class SimpleCreditRuleSet implements RecommendationRuleSet {
 
         if (isEligible) {
             return Optional.of(new RecommendationDTO(
+                    SIMPLE_CREDIT_ID,
                     "Простой кредит",
                     "Откройте мир выгодных кредитов с нами!\n" +
                     "\n" +

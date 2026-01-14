@@ -7,7 +7,7 @@ import java.util.UUID;
 
 public class RecommendationResponse {
 
-    @JsonProperty("userId")
+    @JsonProperty("user_id")
     private UUID userId;
 
     @JsonProperty("recommendations")
