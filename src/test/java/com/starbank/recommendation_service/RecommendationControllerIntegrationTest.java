@@ -57,8 +57,8 @@ public class RecommendationControllerIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentType("application/json"))
                 .andExpect(jsonPath("$.user_id").value(SIMPLE_CREDIT_USER_ID))
-                .andExpect(jsonPath("$.recommendations[0].id").value("ab138afb-f3ba-4a93-b74f-0fcee86d447f"))
-                .andExpect(jsonPath("$.recommendations[0].name").value("Простой кредит"))
+                .andExpect(jsonPath("$.recommendations[0].id").value("59efc529-2fff-41af-baff-90ccd7402925"))
+                .andExpect(jsonPath("$.recommendations[0].name").value("Top Saving"))
                 .andExpect(jsonPath("$.recommendations[0].text").isNotEmpty());
     }
 

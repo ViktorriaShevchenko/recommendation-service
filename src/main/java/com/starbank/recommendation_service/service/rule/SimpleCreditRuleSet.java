@@ -1,6 +1,8 @@
 package com.starbank.recommendation_service.service.rule;
 
 import com.starbank.recommendation_service.dto.RecommendationDTO;
+import com.starbank.recommendation_service.entity.ProductType;
+import com.starbank.recommendation_service.entity.TransactionType;
 import com.starbank.recommendation_service.repository.RecommendationsRepository;
 import org.springframework.stereotype.Component;
 
@@ -20,9 +22,11 @@ public class SimpleCreditRuleSet implements RecommendationRuleSet {
 
     @Override
     public Optional<RecommendationDTO> check(UUID userId) {
-        boolean isEligible = repository.hasNoCreditProducts(userId)
-                             && repository.hasDebitDepositsGreaterThanExpenses(userId)
-                             && repository.hasDebitExpensesOver100000(userId);
+        boolean isEligible = !repository.hasProduct(userId, ProductType.CREDIT)
+                            && (repository.transactionSumAndTypeForProductType(userId, ProductType.DEBIT, TransactionType.DEPOSIT) >
+                                repository.transactionSumAndTypeForProductType(userId, ProductType.DEBIT, TransactionType.WITHDRAW))
+                            && (repository.transactionSumAndTypeForProductType(userId,
+                            ProductType.DEBIT, TransactionType.WITHDRAW) > 100000);
 
         if (isEligible) {
             return Optional.of(new RecommendationDTO(
