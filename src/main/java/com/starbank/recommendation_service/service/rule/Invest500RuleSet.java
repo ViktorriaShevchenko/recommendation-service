@@ -1,6 +1,8 @@
 package com.starbank.recommendation_service.service.rule;
 
 import com.starbank.recommendation_service.dto.RecommendationDTO;
+import com.starbank.recommendation_service.entity.ProductType;
+import com.starbank.recommendation_service.entity.TransactionType;
 import com.starbank.recommendation_service.repository.RecommendationsRepository;
 import org.springframework.stereotype.Component;
 
@@ -20,9 +22,9 @@ public class Invest500RuleSet implements RecommendationRuleSet {
 
     @Override
     public Optional<RecommendationDTO> check(UUID userId) {
-        boolean isEligible = repository.hasDebitProduct(userId)
-                             && repository.hasNoInvestProducts(userId)
-                             && repository.hasSavingDepositsOver1000(userId);
+        boolean isEligible = repository.hasProduct(userId, ProductType.DEBIT)
+                             && !repository.hasProduct(userId, ProductType.INVEST)
+                             && (repository.transactionSumAndTypeForProductType(userId, ProductType.SAVING, TransactionType.DEPOSIT) > 1000);
 
         if (isEligible) {
             return Optional.of(new RecommendationDTO(
