@@ -36,12 +36,4 @@ public class DynamicRecommendationRule {
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "rule", nullable = false, columnDefinition = "jsonb")
     private List<RuleCondition> rule;
-
-    @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
 }

@@ -21,7 +21,7 @@ public class DynamicRuleService {
     @Transactional
     public DynamicRuleResponse createRule(DynamicRuleRequest request) {
         if (repository.existsByProductId(request.getProductId())) {
-            throw new IllegalArgumentException("Rule already exists");
+            throw new IllegalArgumentException("Rule with product_id " + request.getProductId() + " already exists");
         }
 
         DynamicRecommendationRule rule = DynamicRecommendationRule.builder()
@@ -36,7 +36,7 @@ public class DynamicRuleService {
     }
 
     public List<DynamicRuleResponse> getAllRules() {
-        return repository.findAllByOrderByCreatedAtDesc().stream()
+        return repository.findAll().stream()
                 .map(DynamicRuleResponse::new)
                 .collect(Collectors.toList());
     }
@@ -44,7 +44,7 @@ public class DynamicRuleService {
     @Transactional
     public void deleteRuleByProductId(UUID productId) {
         if (!repository.existsByProductId(productId)) {
-            throw new IllegalArgumentException("Rule not found");
+            throw new IllegalArgumentException("Rule with product_id " + productId + " not found");
         }
         repository.deleteByProductId(productId);
     }
