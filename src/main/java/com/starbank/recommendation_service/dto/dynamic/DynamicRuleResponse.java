@@ -31,6 +31,9 @@ public class DynamicRuleResponse {
     @JsonProperty("updated_at")
     private LocalDateTime updatedAt;
 
+    public DynamicRuleResponse() {
+    }
+
     public DynamicRuleResponse(DynamicRecommendationRule entity) {
         this.id = entity.getId();
         this.productName = entity.getProductName();
