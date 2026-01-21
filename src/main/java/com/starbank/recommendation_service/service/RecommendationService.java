@@ -35,6 +35,8 @@ import com.starbank.recommendation_service.entity.dynamic.DynamicRecommendationR
 import com.starbank.recommendation_service.entity.dynamic.RuleCondition;
 import com.starbank.recommendation_service.repository.RecommendationsRepository;
 import com.starbank.recommendation_service.repository.dynamic.DynamicRuleRepository;
+import com.starbank.recommendation_service.entity.ProductType;
+import com.starbank.recommendation_service.entity.TransactionType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -87,17 +89,17 @@ public class RecommendationService {
         switch (query) {
             case "USER_OF":
                 return recommendationsRepository.hasProduct(userId,
-                        com.starbank.recommendation_service.entity.ProductType.valueOf(arguments.get(0)));
+                        ProductType.valueOf(arguments.get(0)));
 
             case "ACTIVE_USER_OF":
                 return recommendationsRepository.hasActiveProduct(userId,
-                        com.starbank.recommendation_service.entity.ProductType.valueOf(arguments.get(0)));
+                        ProductType.valueOf(arguments.get(0)));
 
             case "TRANSACTION_SUM_COMPARE":
                 int actualSum = recommendationsRepository.transactionSumAndTypeForProductType(
                         userId,
-                        com.starbank.recommendation_service.entity.ProductType.valueOf(arguments.get(0)),
-                        com.starbank.recommendation_service.entity.TransactionType.valueOf(arguments.get(1))
+                        ProductType.valueOf(arguments.get(0)),
+                        TransactionType.valueOf(arguments.get(1))
                 );
                 int requiredValue = Integer.parseInt(arguments.get(3));
                 return compareWithOperator(actualSum, arguments.get(2), requiredValue);
@@ -105,13 +107,13 @@ public class RecommendationService {
             case "TRANSACTION_SUM_COMPARE_DEPOSIT_WITHDRAW":
                 int depositSum = recommendationsRepository.transactionSumAndTypeForProductType(
                         userId,
-                        com.starbank.recommendation_service.entity.ProductType.valueOf(arguments.get(0)),
-                        com.starbank.recommendation_service.entity.TransactionType.DEPOSIT
+                        ProductType.valueOf(arguments.get(0)),
+                        TransactionType.DEPOSIT
                 );
                 int withdrawSum = recommendationsRepository.transactionSumAndTypeForProductType(
                         userId,
-                        com.starbank.recommendation_service.entity.ProductType.valueOf(arguments.get(0)),
-                        com.starbank.recommendation_service.entity.TransactionType.WITHDRAW
+                        ProductType.valueOf(arguments.get(0)),
+                        TransactionType.WITHDRAW
                 );
                 return compareWithOperator(depositSum, arguments.get(1), withdrawSum);
 
