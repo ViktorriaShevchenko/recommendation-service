@@ -48,4 +48,17 @@ public class RecommendationsRepository {
                 productType.name(),
                 transactionType.name());
     }
+    public boolean hasActiveProduct(UUID userId, ProductType productType) {
+        boolean result = recommendationsJdbcTemplate.queryForObject(
+                """
+                SELECT COUNT(*) >= 5
+                FROM transactions t
+                JOIN products p ON t.product_id = p.id
+                WHERE t.user_id = ? AND p.type = ?
+                """,
+                Boolean.class,
+                userId.toString(),
+                productType.name());
+        return Boolean.TRUE.equals(result);
+    }
 }
