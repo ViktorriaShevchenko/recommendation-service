@@ -2,82 +2,215 @@ package com.starbank.recommendation_service;
 
 import com.starbank.recommendation_service.dto.RecommendationDTO;
 import com.starbank.recommendation_service.dto.RecommendationResponse;
+import com.starbank.recommendation_service.entity.ProductType;
+import com.starbank.recommendation_service.entity.dynamic.RuleCondition;
+import com.starbank.recommendation_service.repository.FutureRepository;
+import com.starbank.recommendation_service.repository.RecommendationsRepository;
+import com.starbank.recommendation_service.repository.dynamic.DynamicRuleRepository;
 import com.starbank.recommendation_service.service.RecommendationService;
 import com.starbank.recommendation_service.service.rule.RecommendationRuleSet;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.lang.reflect.Method;
 import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-public class RecommendationServiceTest {
-    /*
-    @Mock
-    private RecommendationRuleSet rule1;
+@DisplayName("RecommendationService Unit Tests")
+class RecommendationServiceTest {
+
+    // Используем Spy для списка или создаем реальный список
+    private List<RecommendationRuleSet> ruleSets = new ArrayList<>();
 
     @Mock
-    private RecommendationRuleSet rule2;
+    private DynamicRuleRepository dynamicRuleRepository;
 
-    private RecommendationService recommendationService;
+    @Mock
+    private RecommendationsRepository recommendationsRepository;
+
+    @Mock
+    private FutureRepository futureRepository;
+
+    @Mock
+    private RecommendationRuleSet mockRuleSet;
+
+    private RecommendationService service;
 
     @BeforeEach
     void setUp() {
-        // Перед каждым тестом создаем новый сервис со списком правил
-        List<RecommendationRuleSet> ruleSets = Arrays.asList(rule1, rule2);
-        recommendationService = new RecommendationService(ruleSets);
+        // Добавляем мок в список
+        ruleSets.clear();
+        ruleSets.add(mockRuleSet);
+
+        service = new RecommendationService(
+                ruleSets,
+                dynamicRuleRepository,
+                recommendationsRepository,
+                futureRepository
+        );
+    }
+
+    // ==================== ТЕСТЫ ДЛЯ evaluateCondition ЧЕРЕЗ REFLECTION ====================
+
+    @Test
+    @DisplayName("evaluateCondition - USER_OF возвращает true когда пользователь имеет продукт")
+    void evaluateCondition_UserOf_ReturnsTrue() throws Exception {
+        // Arrange
+        UUID userId = UUID.randomUUID();
+        RuleCondition condition = new RuleCondition();
+        condition.setQuery("USER_OF");
+        condition.setArguments(List.of("DEBIT"));
+        condition.setNegate(false);
+
+        when(recommendationsRepository.hasProduct(userId, ProductType.DEBIT))
+                .thenReturn(true);
+
+        // Act
+        boolean result = invokePrivateEvaluateCondition(condition, userId);
+
+        // Assert
+        assertTrue(result);
+        verify(recommendationsRepository).hasProduct(userId, ProductType.DEBIT);
     }
 
     @Test
-    void shouldReturnRecommendationsFromAllRules() {
-        // Given
+    @DisplayName("evaluateCondition - USER_OF с negate возвращает false когда пользователь имеет продукт")
+    void evaluateCondition_UserOfWithNegate_ReturnsFalse() throws Exception {
+        // Arrange
         UUID userId = UUID.randomUUID();
-        RecommendationDTO dto1 = new RecommendationDTO(UUID.randomUUID(), "Test 1", "Text 1");
-        RecommendationDTO dto2 = new RecommendationDTO(UUID.randomUUID(), "Test 2", "Text 2");
+        RuleCondition condition = new RuleCondition();
+        condition.setQuery("USER_OF");
+        condition.setArguments(List.of("DEBIT"));
+        condition.setNegate(true); // negate = true
 
-        when(rule1.check(userId)).thenReturn(Optional.of(dto1));
-        when(rule2.check(userId)).thenReturn(Optional.of(dto2));
+        when(recommendationsRepository.hasProduct(userId, ProductType.DEBIT))
+                .thenReturn(true);
 
-        // When
-        RecommendationResponse response = recommendationService.getRecommendationsForUser(userId);
+        // Act
+        boolean result = invokePrivateEvaluateCondition(condition, userId);
 
-        // Then
-        assertThat(response.getUserId()).isEqualTo(userId);
-        assertThat(response.getRecommendations()).hasSize(2);
-        assertThat(response.getRecommendations()).contains(dto1, dto2);
+        // Assert
+        // Если negate = true, то результат должен быть обратным
+        // USER_OF = true, но negate = true, значит должно быть false
+        assertFalse(result);
     }
 
     @Test
-    void shouldReturnEmptyListWhenNoRulesMatch() {
-        // Given
+    @DisplayName("evaluateCondition - USER_OF с negate возвращает true когда пользователь НЕ имеет продукт")
+    void evaluateCondition_UserOfWithNegate_WhenUserDoesNotHaveProduct_ReturnsTrue() throws Exception {
+        // Arrange
         UUID userId = UUID.randomUUID();
-        when(rule1.check(userId)).thenReturn(Optional.empty());
-        when(rule2.check(userId)).thenReturn(Optional.empty());
+        RuleCondition condition = new RuleCondition();
+        condition.setQuery("USER_OF");
+        condition.setArguments(List.of("DEBIT"));
+        condition.setNegate(true); // negate = true
 
-        // When
-        RecommendationResponse response = recommendationService.getRecommendationsForUser(userId);
+        when(recommendationsRepository.hasProduct(userId, ProductType.DEBIT))
+                .thenReturn(false); // Пользователь НЕ имеет продукт
 
-        // Then
+        // Act
+        boolean result = invokePrivateEvaluateCondition(condition, userId);
+
+        // Assert
+        // USER_OF = false, но negate = true, значит должно быть true
+        assertTrue(result);
+    }
+
+    // ==================== ТЕСТЫ ДЛЯ getRecommendationsForUser ====================
+
+    @Test
+    @DisplayName("getRecommendationsForUser - возвращает пустой список для нового пользователя")
+    void getRecommendationsForUser_NewUser_ReturnsEmptyList() {
+        // Arrange
+        UUID userId = UUID.randomUUID();
+
+        // Настраиваем моки
+        when(mockRuleSet.check(userId)).thenReturn(Optional.empty());
+        when(dynamicRuleRepository.findAll()).thenReturn(List.of());
+
+        // Act
+        RecommendationResponse response = service.getRecommendationsForUser(userId);
+
+        // Assert
         assertThat(response.getUserId()).isEqualTo(userId);
         assertThat(response.getRecommendations()).isEmpty();
+
+        // Проверяем, что isAlreadyIssued НЕ вызывался, так как нет рекомендаций
+        verify(futureRepository, never()).isAlreadyIssued(any(UUID.class), any(UUID.class));
     }
 
     @Test
-    void shouldHandleEmptyRulesList() {
-        // Given: Сервис с пустым списком правил
-        recommendationService = new RecommendationService(Collections.emptyList());
+    @DisplayName("getRecommendationsForUser - возвращает рекомендацию из фиксированных правил")
+    void getRecommendationsForUser_ReturnsFixedRuleRecommendation() {
+        // Arrange
         UUID userId = UUID.randomUUID();
+        UUID recommendationId = UUID.randomUUID();
+        RecommendationDTO recommendation = new RecommendationDTO(
+                recommendationId, "Test Recommendation", "Test text");
 
-        // When
-        RecommendationResponse response = recommendationService.getRecommendationsForUser(userId);
+        when(mockRuleSet.check(userId)).thenReturn(Optional.of(recommendation));
+        when(dynamicRuleRepository.findAll()).thenReturn(List.of());
+        when(futureRepository.isAlreadyIssued(userId, recommendationId))
+                .thenReturn(false); // Рекомендация еще не выдана
 
-        // Then
-        assertThat(response.getUserId()).isEqualTo(userId);
+        // Act
+        RecommendationResponse response = service.getRecommendationsForUser(userId);
+
+        // Assert
+        assertThat(response.getRecommendations()).hasSize(1);
+        assertThat(response.getRecommendations().get(0).getId()).isEqualTo(recommendationId);
+
+        // Проверяем, что сохранили выдачу
+        verify(futureRepository).isAlreadyIssued(userId, recommendationId);
+        verify(futureRepository).save(
+                eq(userId),
+                eq(recommendationId),
+                eq("Test Recommendation"),
+                eq("Test text")
+        );
+    }
+
+    @Test
+    @DisplayName("getRecommendationsForUser - не возвращает уже выданную рекомендацию")
+    void getRecommendationsForUser_DoesNotReturnAlreadyIssuedRecommendation() {
+        // Arrange
+        UUID userId = UUID.randomUUID();
+        UUID recommendationId = UUID.randomUUID();
+        RecommendationDTO recommendation = new RecommendationDTO(
+                recommendationId, "Test Recommendation", "Test text");
+
+        when(mockRuleSet.check(userId)).thenReturn(Optional.of(recommendation));
+        when(dynamicRuleRepository.findAll()).thenReturn(List.of());
+        when(futureRepository.isAlreadyIssued(userId, recommendationId))
+                .thenReturn(true); // Уже выдана!
+
+        // Act
+        RecommendationResponse response = service.getRecommendationsForUser(userId);
+
+        // Assert
         assertThat(response.getRecommendations()).isEmpty();
-    }*/
+        verify(futureRepository).isAlreadyIssued(userId, recommendationId);
+        verify(futureRepository, never()).save(any(), any(), anyString(), anyString());
+    }
+
+    // ==================== ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ДЛЯ REFLECTION ====================
+
+    /**
+     * Вызывает приватный метод evaluateCondition через reflection
+     */
+    private boolean invokePrivateEvaluateCondition(RuleCondition condition, UUID userId)
+            throws Exception {
+        Method method = RecommendationService.class.getDeclaredMethod(
+                "evaluateCondition", RuleCondition.class, UUID.class);
+        method.setAccessible(true);
+        return (boolean) method.invoke(service, condition, userId);
+    }
 }
