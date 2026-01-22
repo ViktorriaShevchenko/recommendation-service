@@ -10,11 +10,6 @@ import lombok.*;
 import java.util.List;
 import java.util.Objects;
 
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class RuleCondition {
 
     @NotBlank(message = "Query type is required")
@@ -30,6 +25,40 @@ public class RuleCondition {
 
     @JsonProperty("negate")
     private boolean negate;
+
+    public RuleCondition() {
+    }
+
+    public RuleCondition(String query, List<String> arguments, boolean negate) {
+        this.query = query;
+        this.arguments = arguments;
+        this.negate = negate;
+    }
+
+    public String getQuery() {
+        return query;
+    }
+
+    public void setQuery(String query) {
+        this.query = query;
+    }
+
+    public List<String> getArguments() {
+        return arguments;
+    }
+
+    public void setArguments(List<String> arguments) {
+        this.arguments = arguments;
+    }
+
+    public boolean isNegate() {
+        return negate;
+    }
+
+    public void setNegate(boolean negate) {
+        this.negate = negate;
+    }
+
 
     @Override
     public boolean equals(Object o) {

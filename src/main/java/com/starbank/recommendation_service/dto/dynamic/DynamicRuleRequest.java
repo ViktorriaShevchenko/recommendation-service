@@ -23,25 +23,31 @@ public class DynamicRuleRequest {
     public String getProductName() {
         return productName;
     }
-    public UUID getProductId() {
-        return productId;
-    }
-    public String getProductText() {
-        return productText;
-    }
-    public List<RuleCondition> getRule() {
-        return rule;
-    }
 
     public void setProductName(String productName) {
         this.productName = productName;
     }
+
+    public UUID getProductId() {
+        return productId;
+    }
+
     public void setProductId(UUID productId) {
         this.productId = productId;
     }
+
+    public String getProductText() {
+        return productText;
+    }
+
     public void setProductText(String productText) {
         this.productText = productText;
     }
+
+    public List<RuleCondition> getRule() {
+        return rule;
+    }
+
     public void setRule(List<RuleCondition> rule) {
         this.rule = rule;
     }
