@@ -36,10 +36,10 @@ public class DynamicRuleController {
         return ResponseEntity.ok(dynamicRuleService.getAllRules());
     }
 
-    @DeleteMapping("/rule/{id}")
-    public ResponseEntity<Void> deleteRule(@PathVariable UUID id) {
+    @DeleteMapping("/rule/{productId}")
+    public ResponseEntity<Void> deleteRule(@PathVariable UUID productId) {
         try {
-            dynamicRuleService.deleteRuleById(id);
+            dynamicRuleService.deleteRuleByProductId(productId);
             return ResponseEntity.noContent().build();
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
