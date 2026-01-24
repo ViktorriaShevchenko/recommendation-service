@@ -4,7 +4,7 @@ import com.starbank.recommendation_service.dto.RecommendationDTO;
 import com.starbank.recommendation_service.dto.RecommendationResponse;
 import com.starbank.recommendation_service.entity.ProductType;
 import com.starbank.recommendation_service.entity.dynamic.RuleCondition;
-import com.starbank.recommendation_service.repository.FutureRepository;
+import com.starbank.recommendation_service.repository.DynamicRecommendationRepository;
 import com.starbank.recommendation_service.repository.RecommendationsRepository;
 import com.starbank.recommendation_service.repository.dynamic.DynamicRuleRepository;
 import com.starbank.recommendation_service.service.RecommendationService;
@@ -37,7 +37,7 @@ class RecommendationServiceTest {
     private RecommendationsRepository recommendationsRepository;
 
     @Mock
-    private FutureRepository futureRepository;
+    private DynamicRecommendationRepository futureRepository;
 
     @Mock
     private RecommendationRuleSet mockRuleSet;

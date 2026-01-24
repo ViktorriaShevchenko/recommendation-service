@@ -15,9 +15,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
-public class FutureRepositoryTest {
+public class DynamicRecommendationRepositoryTest {
     @Autowired
-    private FutureRepository futureRepository;
+    private DynamicRecommendationRepository dynamicRecommendationRepository;
 
     @Test
     void save_NewRecommendation_SavesSuccessfully() {
@@ -28,10 +28,10 @@ public class FutureRepositoryTest {
         String productText = "Test Text";
 
         // Act
-        futureRepository.save(userId, recommendationId, productName, productText);
+        dynamicRecommendationRepository.save(userId, recommendationId, productName, productText);
 
         // Assert
-        assertThat(futureRepository.isAlreadyIssued(userId, recommendationId)).isTrue();
+        assertThat(dynamicRecommendationRepository.isAlreadyIssued(userId, recommendationId)).isTrue();
     }
 
     @Test
@@ -43,11 +43,11 @@ public class FutureRepositoryTest {
         String productText = "Test Text";
 
         // Act - Save twice
-        futureRepository.save(userId, recommendationId, productName, productText);
-        futureRepository.save(userId, recommendationId, productName, productText);
+        dynamicRecommendationRepository.save(userId, recommendationId, productName, productText);
+        dynamicRecommendationRepository.save(userId, recommendationId, productName, productText);
 
         // Assert - No exception, duplicate ignored
-        assertThat(futureRepository.isAlreadyIssued(userId, recommendationId)).isTrue();
+        assertThat(dynamicRecommendationRepository.isAlreadyIssued(userId, recommendationId)).isTrue();
     }
 
     @Test
@@ -57,7 +57,7 @@ public class FutureRepositoryTest {
         UUID recommendationId = UUID.randomUUID();
 
         // Act & Assert
-        assertThat(futureRepository.isAlreadyIssued(userId, recommendationId)).isFalse();
+        assertThat(dynamicRecommendationRepository.isAlreadyIssued(userId, recommendationId)).isFalse();
     }
 
     @Test
@@ -68,10 +68,10 @@ public class FutureRepositoryTest {
         String productName = "Test Product";
         String productText = "Test Text";
 
-        futureRepository.save(userId, recommendationId, productName, productText);
+        dynamicRecommendationRepository.save(userId, recommendationId, productName, productText);
 
         // Act
-        List<IssuedRecommendationDTO> issued = futureRepository.getIssuedRecommendations(userId);
+        List<IssuedRecommendationDTO> issued = dynamicRecommendationRepository.getIssuedRecommendations(userId);
 
         // Assert
         assertThat(issued).hasSize(1);
@@ -88,13 +88,13 @@ public class FutureRepositoryTest {
         String productName = "Test Product";
         String productText = "Test Text";
 
-        futureRepository.save(userId, recommendationId, productName, productText);
-        assertThat(futureRepository.isAlreadyIssued(userId, recommendationId)).isTrue();
+        dynamicRecommendationRepository.save(userId, recommendationId, productName, productText);
+        assertThat(dynamicRecommendationRepository.isAlreadyIssued(userId, recommendationId)).isTrue();
 
         // Act
-        futureRepository.clearUserRecommendations(userId);
+        dynamicRecommendationRepository.clearUserRecommendations(userId);
 
         // Assert
-        assertThat(futureRepository.isAlreadyIssued(userId, recommendationId)).isFalse();
+        assertThat(dynamicRecommendationRepository.isAlreadyIssued(userId, recommendationId)).isFalse();
     }
 }

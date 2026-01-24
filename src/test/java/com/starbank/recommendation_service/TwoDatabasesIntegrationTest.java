@@ -3,7 +3,7 @@ package com.starbank.recommendation_service;
 import com.starbank.recommendation_service.dto.RecommendationResponse;
 import com.starbank.recommendation_service.dto.dynamic.DynamicRuleRequest;
 import com.starbank.recommendation_service.entity.dynamic.RuleCondition;
-import com.starbank.recommendation_service.repository.FutureRepository;
+import com.starbank.recommendation_service.repository.DynamicRecommendationRepository;
 import com.starbank.recommendation_service.repository.dynamic.DynamicRuleRepository;
 import com.starbank.recommendation_service.service.RecommendationService;
 import com.starbank.recommendation_service.service.dynamic.DynamicRuleService;
