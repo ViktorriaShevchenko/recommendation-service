@@ -11,11 +11,11 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Repository
-public class FutureRepository {
+public class DynamicRecommendationRepository {
 
     private final IssuedRecommendationRepository issuedRecommendationRepository;
 
-    public FutureRepository(IssuedRecommendationRepository issuedRecommendationRepository) {
+    public DynamicRecommendationRepository(IssuedRecommendationRepository issuedRecommendationRepository) {
         this.issuedRecommendationRepository = issuedRecommendationRepository;
     }
 

@@ -4,7 +4,7 @@ import com.starbank.recommendation_service.dto.RecommendationDTO;
 import com.starbank.recommendation_service.dto.RecommendationResponse;
 import com.starbank.recommendation_service.entity.dynamic.DynamicRecommendationRule;
 import com.starbank.recommendation_service.entity.dynamic.RuleCondition;
-import com.starbank.recommendation_service.repository.FutureRepository;
+import com.starbank.recommendation_service.repository.DynamicRecommendationRepository;
 import com.starbank.recommendation_service.repository.RecommendationsRepository;
 import com.starbank.recommendation_service.repository.dynamic.DynamicRuleRepository;
 import com.starbank.recommendation_service.entity.ProductType;
@@ -23,16 +23,16 @@ public class RecommendationService {
     private final List<RecommendationRuleSet> ruleSets; // Фиксированные правила
     private final DynamicRuleRepository dynamicRuleRepository;
     private final RecommendationsRepository recommendationsRepository;
-    private final FutureRepository futureRepository;
+    private final DynamicRecommendationRepository dynamicRecommendationRepository;
 
     public RecommendationService(List<RecommendationRuleSet> ruleSets,
                                  DynamicRuleRepository dynamicRuleRepository,
                                  RecommendationsRepository recommendationsRepository,
-                                 FutureRepository futureRepository) {
+                                 DynamicRecommendationRepository dynamicRecommendationRepository) {
         this.ruleSets = ruleSets;
         this.dynamicRuleRepository = dynamicRuleRepository;
         this.recommendationsRepository = recommendationsRepository;
-        this.futureRepository = futureRepository;
+        this.dynamicRecommendationRepository = dynamicRecommendationRepository;
     }
 
     @Transactional
@@ -43,9 +43,9 @@ public class RecommendationService {
         if (ruleSets != null) {
             for (RecommendationRuleSet ruleSet : ruleSets) {
                 ruleSet.check(userId).ifPresent(recommendation -> {
-                    if (!futureRepository.isAlreadyIssued(userId, recommendation.getId())) {
+                    if (!dynamicRecommendationRepository.isAlreadyIssued(userId, recommendation.getId())) {
                         recommendations.add(recommendation);
-                        futureRepository.save(userId, recommendation.getId(),
+                        dynamicRecommendationRepository.save(userId, recommendation.getId(),
                                 recommendation.getName(), recommendation.getText());
                     }
                 });
@@ -57,10 +57,10 @@ public class RecommendationService {
 
         for (DynamicRecommendationRule rule : allRules) {
             if (isRuleApplicable(rule, userId)) {
-                if (!futureRepository.isAlreadyIssued(userId, rule.getProductId())) {
+                if (!dynamicRecommendationRepository.isAlreadyIssued(userId, rule.getProductId())) {
                     RecommendationDTO recommendation = convertToRecommendationDTO(rule);
                     recommendations.add(recommendation);
-                    futureRepository.save(userId, rule.getProductId(),
+                    dynamicRecommendationRepository.save(userId, rule.getProductId(),
                             rule.getProductName(), rule.getProductText());
                 }
             }
