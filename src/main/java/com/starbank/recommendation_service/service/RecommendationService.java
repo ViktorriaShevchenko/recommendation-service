@@ -71,13 +71,7 @@ public class RecommendationService {
 
     private boolean isRuleApplicable(DynamicRecommendationRule rule, UUID userId) {
         for (RuleCondition condition : rule.getRule()) {
-            boolean conditionResult = evaluateCondition(condition, userId);
-
-            if (condition.isNegate()) {
-                conditionResult = !conditionResult;
-            }
-
-            if (!conditionResult) {
+            if (!evaluateCondition(condition, userId)) {
                 return false;
             }
         }
@@ -89,14 +83,18 @@ public class RecommendationService {
         List<String> arguments = condition.getArguments();
 
         try {
+            boolean conditionResult;
+
             switch (query) {
                 case "USER_OF":
-                    return recommendationsRepository.hasProduct(userId,
+                    conditionResult = recommendationsRepository.hasProduct(userId,
                             ProductType.valueOf(arguments.get(0)));
+                    break;
 
                 case "ACTIVE_USER_OF":
-                    return recommendationsRepository.hasActiveProduct(userId,
+                    conditionResult = recommendationsRepository.hasActiveProduct(userId,
                             ProductType.valueOf(arguments.get(0)));
+                    break;
 
                 case "TRANSACTION_SUM_COMPARE":
                     validateArgumentsCount(arguments, 4, query);
@@ -107,7 +105,8 @@ public class RecommendationService {
                     );
                     int requiredValue = Integer.parseInt(arguments.get(3));
                     String operator = arguments.get(2);
-                    return compareWithOperator(actualSum, operator, requiredValue);
+                    conditionResult = compareWithOperator(actualSum, operator, requiredValue);
+                    break;
 
                 case "TRANSACTION_SUM_COMPARE_DEPOSIT_WITHDRAW":
                     validateArgumentsCount(arguments, 2, query);
@@ -121,11 +120,15 @@ public class RecommendationService {
                             ProductType.valueOf(arguments.get(0)),
                             TransactionType.WITHDRAW
                     );
-                    return compareWithOperator(depositSum, arguments.get(1), withdrawSum);
+                    conditionResult = compareWithOperator(depositSum, arguments.get(1), withdrawSum);
+                    break;
 
                 default:
                     throw new IllegalArgumentException("Unknown query type: " + query);
             }
+
+            return condition.isNegate() ? !conditionResult : conditionResult;
+
         } catch (IllegalArgumentException e) {
             return false;
         }

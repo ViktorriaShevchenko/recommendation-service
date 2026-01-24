@@ -4,7 +4,6 @@ import com.starbank.recommendation_service.dto.dynamic.DynamicRuleRequest;
 import com.starbank.recommendation_service.dto.dynamic.DynamicRuleResponse;
 import com.starbank.recommendation_service.service.dynamic.DynamicRuleService;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,6 +13,7 @@ import java.util.UUID;
 
 @RestController
 @Slf4j
+@RequestMapping("rule")
 public class DynamicRuleController {
 
     private final DynamicRuleService dynamicRuleService;
@@ -22,7 +22,7 @@ public class DynamicRuleController {
         this.dynamicRuleService = dynamicRuleService;
     }
 
-    @PostMapping("/rule")
+    @PostMapping
     public ResponseEntity<DynamicRuleResponse> createRule(@RequestBody @Valid DynamicRuleRequest request) {
         try {
             return ResponseEntity.ok(dynamicRuleService.createRule(request));
@@ -31,15 +31,15 @@ public class DynamicRuleController {
         }
     }
 
-    @GetMapping("/rule")
+    @GetMapping
     public ResponseEntity<List<DynamicRuleResponse>> getAllRules() {
         return ResponseEntity.ok(dynamicRuleService.getAllRules());
     }
 
-    @DeleteMapping("/rule/{id}")
-    public ResponseEntity<Void> deleteRule(@PathVariable UUID id) {
+    @DeleteMapping("/{productId}")
+    public ResponseEntity<Void> deleteRule(@PathVariable UUID productId) {
         try {
-            dynamicRuleService.deleteRuleById(id);
+            dynamicRuleService.deleteRuleByProductId(productId);
             return ResponseEntity.noContent().build();
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
