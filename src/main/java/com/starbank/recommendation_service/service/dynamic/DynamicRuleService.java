@@ -42,17 +42,11 @@ public class DynamicRuleService {
                 .collect(Collectors.toList());
     }
 
-    /*@Transactional
-    public void deleteRuleById(UUID id) {
-        if (!repository.existsById(id)) {
-            throw new IllegalArgumentException("Rule with id " + id + " not found");
-        }
-        repository.deleteById(id);
-    }*/
-
     @Transactional
     public void deleteRuleByProductId(UUID productId) {
-        repository.findByProductId(productId)
-                .ifPresent(rule -> repository.deleteById(rule.getId()));
+        if (!repository.existsByProductId(productId)) {
+            throw new IllegalArgumentException("Rule with product_id " + productId + " not found");
+        }
+        repository.deleteByProductId(productId);
     }
 }

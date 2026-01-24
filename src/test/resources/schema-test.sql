@@ -1,4 +1,4 @@
--- Создание таблиц для тестовой БД
+-- Только DDL операции
 CREATE TABLE IF NOT EXISTS users (
     id VARCHAR(36) PRIMARY KEY,
     name VARCHAR(255)
@@ -19,3 +19,10 @@ CREATE TABLE IF NOT EXISTS transactions (
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (product_id) REFERENCES products(id)
 );
+
+-- Индексы
+CREATE INDEX IF NOT EXISTS idx_transactions_user_product
+ON transactions(user_id, product_id);
+
+CREATE INDEX IF NOT EXISTS idx_transactions_user_type
+ON transactions(user_id, type);
