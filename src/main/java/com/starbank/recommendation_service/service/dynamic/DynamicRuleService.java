@@ -6,17 +6,19 @@ import com.starbank.recommendation_service.entity.dynamic.DynamicRecommendationR
 import com.starbank.recommendation_service.repository.dynamic.DynamicRuleRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 public class DynamicRuleService {
 
     private final DynamicRuleRepository repository;
+
+    public DynamicRuleService(DynamicRuleRepository repository) {
+        this.repository = repository;
+    }
 
     @Transactional
     public DynamicRuleResponse createRule(DynamicRuleRequest request) {
@@ -24,12 +26,11 @@ public class DynamicRuleService {
             throw new IllegalArgumentException("Rule with product_id " + request.getProductId() + " already exists");
         }
 
-        DynamicRecommendationRule rule = DynamicRecommendationRule.builder()
-                .productName(request.getProductName())
-                .productId(request.getProductId())
-                .productText(request.getProductText())
-                .rule(request.getRule())
-                .build();
+        DynamicRecommendationRule rule = new DynamicRecommendationRule();
+        rule.setProductName(request.getProductName());
+        rule.setProductId(request.getProductId());
+        rule.setProductText(request.getProductText());
+        rule.setRule(request.getRule());
 
         DynamicRecommendationRule savedRule = repository.save(rule);
         return new DynamicRuleResponse(savedRule);
@@ -42,10 +43,16 @@ public class DynamicRuleService {
     }
 
     @Transactional
-    public void deleteRuleByProductId(UUID productId) {
-        if (!repository.existsByProductId(productId)) {
-            throw new IllegalArgumentException("Rule with product_id " + productId + " not found");
+    public void deleteRuleById(UUID id) {
+        if (!repository.existsById(id)) {
+            throw new IllegalArgumentException("Rule with id " + id + " not found");
         }
-        repository.deleteByProductId(productId);
+        repository.deleteById(id);
+    }
+
+    @Transactional
+    public void deleteRuleByProductId(UUID productId) {
+        repository.findByProductId(productId)
+                .ifPresent(rule -> repository.deleteById(rule.getId()));
     }
 }
