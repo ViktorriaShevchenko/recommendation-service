@@ -10,6 +10,7 @@ import com.starbank.recommendation_service.repository.dynamic.DynamicRuleReposit
 import com.starbank.recommendation_service.entity.ProductType;
 import com.starbank.recommendation_service.entity.TransactionType;
 import com.starbank.recommendation_service.service.rule.RecommendationRuleSet;
+import com.starbank.recommendation_service.service.rule.condition.ConditionEvaluatorService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,15 +25,18 @@ public class RecommendationService {
     private final DynamicRuleRepository dynamicRuleRepository;
     private final RecommendationsRepository recommendationsRepository;
     private final DynamicRecommendationRepository dynamicRecommendationRepository;
+    private final ConditionEvaluatorService conditionEvaluatorService;
 
     public RecommendationService(List<RecommendationRuleSet> ruleSets,
                                  DynamicRuleRepository dynamicRuleRepository,
                                  RecommendationsRepository recommendationsRepository,
-                                 DynamicRecommendationRepository dynamicRecommendationRepository) {
+                                 DynamicRecommendationRepository dynamicRecommendationRepository,
+                                 ConditionEvaluatorService conditionEvaluatorService) {
         this.ruleSets = ruleSets;
         this.dynamicRuleRepository = dynamicRuleRepository;
         this.recommendationsRepository = recommendationsRepository;
         this.dynamicRecommendationRepository = dynamicRecommendationRepository;
+        this.conditionEvaluatorService = conditionEvaluatorService;
     }
 
     @Transactional
@@ -79,59 +83,7 @@ public class RecommendationService {
     }
 
     private boolean evaluateCondition(RuleCondition condition, UUID userId) {
-        String query = condition.getQuery();
-        List<String> arguments = condition.getArguments();
-
-        try {
-            boolean conditionResult;
-
-            switch (query) {
-                case "USER_OF":
-                    conditionResult = recommendationsRepository.hasProduct(userId,
-                            ProductType.valueOf(arguments.get(0)));
-                    break;
-
-                case "ACTIVE_USER_OF":
-                    conditionResult = recommendationsRepository.hasActiveProduct(userId,
-                            ProductType.valueOf(arguments.get(0)));
-                    break;
-
-                case "TRANSACTION_SUM_COMPARE":
-                    validateArgumentsCount(arguments, 4, query);
-                    int actualSum = recommendationsRepository.transactionSumAndTypeForProductType(
-                            userId,
-                            ProductType.valueOf(arguments.get(0)),
-                            TransactionType.valueOf(arguments.get(1))
-                    );
-                    int requiredValue = Integer.parseInt(arguments.get(3));
-                    String operator = arguments.get(2);
-                    conditionResult = compareWithOperator(actualSum, operator, requiredValue);
-                    break;
-
-                case "TRANSACTION_SUM_COMPARE_DEPOSIT_WITHDRAW":
-                    validateArgumentsCount(arguments, 2, query);
-                    int depositSum = recommendationsRepository.transactionSumAndTypeForProductType(
-                            userId,
-                            ProductType.valueOf(arguments.get(0)),
-                            TransactionType.DEPOSIT
-                    );
-                    int withdrawSum = recommendationsRepository.transactionSumAndTypeForProductType(
-                            userId,
-                            ProductType.valueOf(arguments.get(0)),
-                            TransactionType.WITHDRAW
-                    );
-                    conditionResult = compareWithOperator(depositSum, arguments.get(1), withdrawSum);
-                    break;
-
-                default:
-                    throw new IllegalArgumentException("Unknown query type: " + query);
-            }
-
-            return condition.isNegate() ? !conditionResult : conditionResult;
-
-        } catch (IllegalArgumentException e) {
-            return false;
-        }
+        return conditionEvaluatorService.evaluateCondition(condition, userId, recommendationsRepository);
     }
 
     private void validateArgumentsCount(List<String> arguments, int expected, String query) {
