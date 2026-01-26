@@ -5,6 +5,8 @@ import com.starbank.recommendation_service.dto.dynamic.DynamicRuleResponse;
 import com.starbank.recommendation_service.entity.dynamic.DynamicRecommendationRule;
 import com.starbank.recommendation_service.repository.dynamic.DynamicRuleRepository;
 import com.starbank.recommendation_service.service.RuleStatisticService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,6 +17,7 @@ import java.util.stream.Collectors;
 @Service
 public class DynamicRuleService {
 
+    private static final Logger log = LoggerFactory.getLogger(DynamicRuleService.class);
     private final DynamicRuleRepository repository;
     private final RuleStatisticService ruleStatisticService;
 
@@ -37,7 +40,13 @@ public class DynamicRuleService {
         rule.setRule(request.getRule());
 
         DynamicRecommendationRule savedRule = repository.save(rule);
-        ruleStatisticService.createStatisticForRule(savedRule);
+        try {
+            ruleStatisticService.createStatisticForRule(savedRule);
+            log.info("Создана запись статистики для нового правила: {}", savedRule.getId());
+        } catch (Exception e) {
+            log.error("Не удалось создать статистику для правила {}: {}",
+                    savedRule.getId(), e.getMessage());
+        }
         return new DynamicRuleResponse(savedRule);
     }
 

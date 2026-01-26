@@ -11,6 +11,8 @@ import com.starbank.recommendation_service.entity.ProductType;
 import com.starbank.recommendation_service.entity.TransactionType;
 import com.starbank.recommendation_service.service.rule.RecommendationRuleSet;
 import com.starbank.recommendation_service.service.rule.condition.ConditionEvaluatorService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +22,8 @@ import java.util.UUID;
 
 @Service
 public class RecommendationService {
+
+    private static final Logger log = LoggerFactory.getLogger(RecommendationService.class);
 
     private final List<RecommendationRuleSet> ruleSets;
     private final DynamicRuleRepository dynamicRuleRepository;
@@ -46,7 +50,7 @@ public class RecommendationService {
     public RecommendationResponse getRecommendationsForUser(UUID userId) {
         List<RecommendationDTO> recommendations = new ArrayList<>();
 
-        // 1. Проверяем фиксированные правила
+        // 1. Проверяем фиксированные правила (не учитывается в статистике)
         if (ruleSets != null) {
             for (RecommendationRuleSet ruleSet : ruleSets) {
                 ruleSet.check(userId).ifPresent(recommendation -> {
@@ -59,7 +63,7 @@ public class RecommendationService {
             }
         }
 
-        // 2. Проверяем динамические правила
+        // 2. Проверяем динамические правила (учитываются в статистике)
         List<DynamicRecommendationRule> allRules = dynamicRuleRepository.findAll();
 
         for (DynamicRecommendationRule rule : allRules) {
@@ -67,13 +71,29 @@ public class RecommendationService {
                 if (!dynamicRecommendationRepository.isAlreadyIssued(userId, rule.getProductId())) {
                     RecommendationDTO recommendation = convertToRecommendationDTO(rule);
                     recommendations.add(recommendation);
+                    // Сохраняем факт выдачи рекомендации
                     dynamicRecommendationRepository.save(userId, rule.getProductId(),
                             rule.getProductName(), rule.getProductText());
-
-                    ruleStatisticService.incrementStatistic(rule.getId());
+                    log.info("Выдана динамическая рекомендация '{}' (ruleId: {}) для пользователя {}",
+                            rule.getProductName(), rule.getId(), userId);
+                    try {
+                        ruleStatisticService.incrementStatistic(rule.getId());
+                        log.debug("Статистика увеличена для правила: {}", rule.getId());
+                    } catch (Exception e) {
+                        // Не прерываем основную логику, если сбор статистики не удался
+                        log.error("Ошибка при обновлении статистики для правила {}: {}",
+                                rule.getId(), e.getMessage());
+                    }
+                } else {
+                    log.debug("Рекомендация от правила {} уже была выдана пользователю {} ранее",
+                            rule.getId(), userId);
                 }
+            } else {
+                log.debug("Правило {} НЕ применимо для пользователя {}", rule.getId(), userId);
             }
         }
+
+        log.info("Всего рекомендаций для пользователя {}: {}", userId, recommendations.size());
 
         return new RecommendationResponse(userId, recommendations);
     }
