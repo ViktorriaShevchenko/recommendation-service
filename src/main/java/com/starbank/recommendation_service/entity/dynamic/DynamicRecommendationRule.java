@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -77,5 +78,16 @@ public class DynamicRecommendationRule {
 
     public void setRule(List<RuleCondition> rule) {
         this.rule = rule;
+    }
+
+    @OneToMany(mappedBy = "rule", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    private List<RuleStatistic> statistics = new ArrayList<>();
+
+    public List<RuleStatistic> getStatistics() {
+        return statistics;
+    }
+
+    public void setStatistics(List<RuleStatistic> statistics) {
+        this.statistics = statistics;
     }
 }
