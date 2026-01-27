@@ -1,6 +1,8 @@
 package com.starbank.recommendation_service.configuration;
 
 import com.starbank.recommendation_service.bot.RecommendationTelegramBot;
+import com.starbank.recommendation_service.service.RecommendationService;
+import com.starbank.recommendation_service.service.UserService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -25,7 +27,13 @@ public class TelegramBotConfig {
     }
 
     @Bean
-    public RecommendationTelegramBot recommendationBot() {
-        return new RecommendationTelegramBot(botToken, botUsername);
+    public RecommendationTelegramBot recommendationBot(RecommendationService recommendationService,
+                                                       UserService userService) {
+        return new RecommendationTelegramBot(
+                botToken,
+                botUsername,
+                recommendationService,
+                userService
+        );
     }
 }
