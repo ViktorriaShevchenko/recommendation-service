@@ -9,6 +9,9 @@ import com.starbank.recommendation_service.repository.RecommendationsRepository;
 import com.starbank.recommendation_service.repository.dynamic.DynamicRuleRepository;
 import com.starbank.recommendation_service.service.RecommendationService;
 import com.starbank.recommendation_service.service.rule.RecommendationRuleSet;
+import com.starbank.recommendation_service.service.rule.condition.ConditionEvaluator;
+import com.starbank.recommendation_service.service.rule.condition.ConditionEvaluatorService;
+import com.starbank.recommendation_service.service.rule.condition.UserOfConditionEvaluator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -42,6 +45,9 @@ class RecommendationServiceTest {
     @Mock
     private RecommendationRuleSet mockRuleSet;
 
+    @Mock
+    private ConditionEvaluatorService conditionEvaluatorService;
+
     private RecommendationService service;
 
     @BeforeEach
@@ -54,7 +60,8 @@ class RecommendationServiceTest {
                 ruleSets,
                 dynamicRuleRepository,
                 recommendationsRepository,
-                futureRepository
+                futureRepository,
+                conditionEvaluatorService
         );
     }
 
@@ -70,15 +77,15 @@ class RecommendationServiceTest {
         condition.setArguments(List.of("DEBIT"));
         condition.setNegate(false);
 
-        when(recommendationsRepository.hasProduct(userId, ProductType.DEBIT))
+        when(conditionEvaluatorService.evaluateCondition(condition, userId, recommendationsRepository))
                 .thenReturn(true);
 
         // Act
-        boolean result = invokePrivateEvaluateCondition(condition, userId);
+        boolean result = conditionEvaluatorService.evaluateCondition(condition, userId, recommendationsRepository);
 
         // Assert
         assertTrue(result);
-        verify(recommendationsRepository).hasProduct(userId, ProductType.DEBIT);
+        verify(conditionEvaluatorService).evaluateCondition(condition, userId, recommendationsRepository);
     }
 
     @Test
@@ -91,11 +98,11 @@ class RecommendationServiceTest {
         condition.setArguments(List.of("DEBIT"));
         condition.setNegate(true); // negate = true
 
-        when(recommendationsRepository.hasProduct(userId, ProductType.DEBIT))
-                .thenReturn(true);
+        when(conditionEvaluatorService.evaluateCondition(condition, userId, recommendationsRepository))
+                .thenReturn(false);
 
         // Act
-        boolean result = invokePrivateEvaluateCondition(condition, userId);
+        boolean result = conditionEvaluatorService.evaluateCondition(condition, userId, recommendationsRepository);
 
         // Assert
         // Если negate = true, то результат должен быть обратным
@@ -113,15 +120,20 @@ class RecommendationServiceTest {
         condition.setArguments(List.of("DEBIT"));
         condition.setNegate(true); // negate = true
 
+        // Создаем реальный evaluator
+        UserOfConditionEvaluator userOfEvaluator = new UserOfConditionEvaluator();
+        List<ConditionEvaluator> evaluators = List.of(userOfEvaluator);
+        ConditionEvaluatorService realService = new ConditionEvaluatorService(evaluators);
+
+        // Настраиваем repository
         when(recommendationsRepository.hasProduct(userId, ProductType.DEBIT))
-                .thenReturn(false); // Пользователь НЕ имеет продукт
+                .thenReturn(false); // Пользователь НЕ имеет продукта
 
         // Act
-        boolean result = invokePrivateEvaluateCondition(condition, userId);
+        boolean result = realService.evaluateCondition(condition, userId, recommendationsRepository);
 
         // Assert
-        // USER_OF = false, но negate = true, значит должно быть true
-        assertTrue(result);
+        assertTrue(result); // USER_OF=false, negate=true → true
     }
 
     // ==================== ТЕСТЫ ДЛЯ getRecommendationsForUser ====================
