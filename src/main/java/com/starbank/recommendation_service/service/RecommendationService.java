@@ -10,6 +10,9 @@ import com.starbank.recommendation_service.repository.dynamic.DynamicRuleReposit
 import com.starbank.recommendation_service.entity.ProductType;
 import com.starbank.recommendation_service.entity.TransactionType;
 import com.starbank.recommendation_service.service.rule.RecommendationRuleSet;
+import com.starbank.recommendation_service.service.rule.condition.ConditionEvaluatorService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,26 +23,34 @@ import java.util.UUID;
 @Service
 public class RecommendationService {
 
-    private final List<RecommendationRuleSet> ruleSets; // Фиксированные правила
+    private static final Logger log = LoggerFactory.getLogger(RecommendationService.class);
+
+    private final List<RecommendationRuleSet> ruleSets;
     private final DynamicRuleRepository dynamicRuleRepository;
     private final RecommendationsRepository recommendationsRepository;
     private final DynamicRecommendationRepository dynamicRecommendationRepository;
+    private final ConditionEvaluatorService conditionEvaluatorService;
+    private final RuleStatisticService ruleStatisticService;
 
     public RecommendationService(List<RecommendationRuleSet> ruleSets,
                                  DynamicRuleRepository dynamicRuleRepository,
                                  RecommendationsRepository recommendationsRepository,
-                                 DynamicRecommendationRepository dynamicRecommendationRepository) {
+                                 DynamicRecommendationRepository dynamicRecommendationRepository,
+                                 ConditionEvaluatorService conditionEvaluatorService,
+                                 RuleStatisticService ruleStatisticService) {
         this.ruleSets = ruleSets;
         this.dynamicRuleRepository = dynamicRuleRepository;
         this.recommendationsRepository = recommendationsRepository;
         this.dynamicRecommendationRepository = dynamicRecommendationRepository;
+        this.conditionEvaluatorService = conditionEvaluatorService;
+        this.ruleStatisticService = ruleStatisticService;
     }
 
     @Transactional
     public RecommendationResponse getRecommendationsForUser(UUID userId) {
         List<RecommendationDTO> recommendations = new ArrayList<>();
 
-        // 1. Проверяем фиксированные правила
+        // 1. Проверяем фиксированные правила (не учитывается в статистике)
         if (ruleSets != null) {
             for (RecommendationRuleSet ruleSet : ruleSets) {
                 ruleSet.check(userId).ifPresent(recommendation -> {
@@ -52,7 +63,7 @@ public class RecommendationService {
             }
         }
 
-        // 2. Проверяем динамические правила
+        // 2. Проверяем динамические правила (учитываются в статистике)
         List<DynamicRecommendationRule> allRules = dynamicRuleRepository.findAll();
 
         for (DynamicRecommendationRule rule : allRules) {
@@ -60,11 +71,29 @@ public class RecommendationService {
                 if (!dynamicRecommendationRepository.isAlreadyIssued(userId, rule.getProductId())) {
                     RecommendationDTO recommendation = convertToRecommendationDTO(rule);
                     recommendations.add(recommendation);
+                    // Сохраняем факт выдачи рекомендации
                     dynamicRecommendationRepository.save(userId, rule.getProductId(),
                             rule.getProductName(), rule.getProductText());
+                    log.info("Выдана динамическая рекомендация '{}' (ruleId: {}) для пользователя {}",
+                            rule.getProductName(), rule.getId(), userId);
+                    try {
+                        ruleStatisticService.incrementStatistic(rule.getId());
+                        log.debug("Статистика увеличена для правила: {}", rule.getId());
+                    } catch (Exception e) {
+                        // Не прерываем основную логику, если сбор статистики не удался
+                        log.error("Ошибка при обновлении статистики для правила {}: {}",
+                                rule.getId(), e.getMessage());
+                    }
+                } else {
+                    log.debug("Рекомендация от правила {} уже была выдана пользователю {} ранее",
+                            rule.getId(), userId);
                 }
+            } else {
+                log.debug("Правило {} НЕ применимо для пользователя {}", rule.getId(), userId);
             }
         }
+
+        log.info("Всего рекомендаций для пользователя {}: {}", userId, recommendations.size());
 
         return new RecommendationResponse(userId, recommendations);
     }
@@ -79,59 +108,7 @@ public class RecommendationService {
     }
 
     private boolean evaluateCondition(RuleCondition condition, UUID userId) {
-        String query = condition.getQuery();
-        List<String> arguments = condition.getArguments();
-
-        try {
-            boolean conditionResult;
-
-            switch (query) {
-                case "USER_OF":
-                    conditionResult = recommendationsRepository.hasProduct(userId,
-                            ProductType.valueOf(arguments.get(0)));
-                    break;
-
-                case "ACTIVE_USER_OF":
-                    conditionResult = recommendationsRepository.hasActiveProduct(userId,
-                            ProductType.valueOf(arguments.get(0)));
-                    break;
-
-                case "TRANSACTION_SUM_COMPARE":
-                    validateArgumentsCount(arguments, 4, query);
-                    int actualSum = recommendationsRepository.transactionSumAndTypeForProductType(
-                            userId,
-                            ProductType.valueOf(arguments.get(0)),
-                            TransactionType.valueOf(arguments.get(1))
-                    );
-                    int requiredValue = Integer.parseInt(arguments.get(3));
-                    String operator = arguments.get(2);
-                    conditionResult = compareWithOperator(actualSum, operator, requiredValue);
-                    break;
-
-                case "TRANSACTION_SUM_COMPARE_DEPOSIT_WITHDRAW":
-                    validateArgumentsCount(arguments, 2, query);
-                    int depositSum = recommendationsRepository.transactionSumAndTypeForProductType(
-                            userId,
-                            ProductType.valueOf(arguments.get(0)),
-                            TransactionType.DEPOSIT
-                    );
-                    int withdrawSum = recommendationsRepository.transactionSumAndTypeForProductType(
-                            userId,
-                            ProductType.valueOf(arguments.get(0)),
-                            TransactionType.WITHDRAW
-                    );
-                    conditionResult = compareWithOperator(depositSum, arguments.get(1), withdrawSum);
-                    break;
-
-                default:
-                    throw new IllegalArgumentException("Unknown query type: " + query);
-            }
-
-            return condition.isNegate() ? !conditionResult : conditionResult;
-
-        } catch (IllegalArgumentException e) {
-            return false;
-        }
+        return conditionEvaluatorService.evaluateCondition(condition, userId, recommendationsRepository);
     }
 
     private void validateArgumentsCount(List<String> arguments, int expected, String query) {

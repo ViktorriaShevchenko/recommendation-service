@@ -5,3 +5,6 @@ databaseChangeLog:
   - include:
       file: versions/002-create-issued-recommendations-table.yml
       relativeToChangelogFile: true
+  - include:
+      file: versions/003-create-rule-statistics-table.yml
+      relativeToChangelogFile: true
