@@ -21,22 +21,25 @@ import java.util.UUID;
 @Service
 public class RecommendationService {
 
-    private final List<RecommendationRuleSet> ruleSets; // Фиксированные правила
+    private final List<RecommendationRuleSet> ruleSets;
     private final DynamicRuleRepository dynamicRuleRepository;
     private final RecommendationsRepository recommendationsRepository;
     private final DynamicRecommendationRepository dynamicRecommendationRepository;
     private final ConditionEvaluatorService conditionEvaluatorService;
+    private final RuleStatisticService ruleStatisticService;
 
     public RecommendationService(List<RecommendationRuleSet> ruleSets,
                                  DynamicRuleRepository dynamicRuleRepository,
                                  RecommendationsRepository recommendationsRepository,
                                  DynamicRecommendationRepository dynamicRecommendationRepository,
-                                 ConditionEvaluatorService conditionEvaluatorService) {
+                                 ConditionEvaluatorService conditionEvaluatorService,
+                                 RuleStatisticService ruleStatisticService) {
         this.ruleSets = ruleSets;
         this.dynamicRuleRepository = dynamicRuleRepository;
         this.recommendationsRepository = recommendationsRepository;
         this.dynamicRecommendationRepository = dynamicRecommendationRepository;
         this.conditionEvaluatorService = conditionEvaluatorService;
+        this.ruleStatisticService = ruleStatisticService;
     }
 
     @Transactional
@@ -66,6 +69,8 @@ public class RecommendationService {
                     recommendations.add(recommendation);
                     dynamicRecommendationRepository.save(userId, rule.getProductId(),
                             rule.getProductName(), rule.getProductText());
+
+                    ruleStatisticService.incrementStatistic(rule.getId());
                 }
             }
         }
