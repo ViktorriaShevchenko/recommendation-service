@@ -1,0 +1,54 @@
+databaseChangeLog:
+  - changeSet:
+      id: create-rule-statistics-table
+      author: ViktorriaShevchenko
+      changes:
+        - createTable:
+            tableName: rule_statistics
+            columns:
+              - column:
+                  name: id
+                  type: bigserial
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: rule_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_rule_statistics_rule
+                    references: dynamic_recommendation_rule(id)
+                    onDelete: CASCADE
+              - column:
+                  name: count
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_triggered_at
+                  type: timestamp
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp
+
+        - createIndex:
+            tableName: rule_statistics
+            columns:
+              - column:
+                  name: rule_id
+            indexName: idx_rule_statistics_rule_id
+            unique: true
+
+        - createIndex:
+            tableName: rule_statistics
+            columns:
+              - column:
+                  name: last_triggered_at
+            indexName: idx_rule_statistics_last_triggered
