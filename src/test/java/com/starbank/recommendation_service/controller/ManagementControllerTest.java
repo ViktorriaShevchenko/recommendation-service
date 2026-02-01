@@ -9,9 +9,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.util.Properties;
-
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -32,6 +30,33 @@ public class ManagementControllerTest {
     private BuildProperties buildProperties;
 
     @Test
+    void clearCaches_shouldReturnSuccessResponse() throws Exception {
+        // Arrange
+        doNothing().when(cacheManagementService).clearAllCaches();
+
+        // Act & Assert
+        mockMvc.perform(post("/management/clear-caches"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("All caches cleared successfully"))
+                .andExpect(jsonPath("$.caches_cleared").doesNotExist()); // Этого поля больше нет
+    }
+
+    @Test
+    void clearCaches_whenServiceThrowsException_shouldReturnErrorResponse() throws Exception {
+        // Arrange
+        doThrow(new RuntimeException("Cache error"))
+                .when(cacheManagementService).clearAllCaches();
+
+        // Act & Assert
+        mockMvc.perform(post("/management/clear-caches"))
+                .andExpect(status().is5xxServerError())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value(containsString("Failed to clear")))
+                .andExpect(jsonPath("$.caches_cleared").doesNotExist()); // Этого поля больше нет
+    }
+
+    @Test
     void getBuildInfo_shouldReturnNameAndVersion() throws Exception {
         // Arrange
         when(buildProperties.getArtifact()).thenReturn("recommendation-service");
@@ -42,30 +67,5 @@ public class ManagementControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("recommendation-service"))
                 .andExpect(jsonPath("$.version").value("1.0.0"));
-    }
-
-
-    @Test
-    void clearCaches_shouldReturnSuccessResponse() throws Exception {
-        // Arrange
-        when(cacheManagementService.clearAllCaches()).thenReturn(5);
-
-        // Act & Assert
-        mockMvc.perform(post("/management/clear-caches"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.message").value(containsString("cleared")))
-                .andExpect(jsonPath("$.caches_cleared").value(5));
-    }
-
-    @Test
-    void clearCaches_whenNoCachesFound_shouldReturnZero() throws Exception {
-        // Arrange
-        when(cacheManagementService.clearAllCaches()).thenReturn(0);
-
-        // Act & Assert
-        mockMvc.perform(post("/management/clear-caches"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.caches_cleared").value(0));
     }
 }

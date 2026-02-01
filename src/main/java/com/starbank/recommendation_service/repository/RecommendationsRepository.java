@@ -58,6 +58,14 @@ public class RecommendationsRepository {
                 .build();
     }
 
+    public void clearAllCaches() {
+        userOfCache.invalidateAll();
+        activeUserOfCache.invalidateAll();
+        transactionSumCache.invalidateAll();
+        userIdCache.invalidateAll();
+        userFullNameCache.invalidateAll();
+    }
+
     public boolean hasProduct(UUID userId, ProductType productType) {
         String key = userId + ":" + productType.name();
         return userOfCache.get(key, k -> executeHasProduct(userId, productType));

@@ -10,16 +10,12 @@ public class CacheClearResponse {
     @JsonProperty("message")
     private String message;
 
-    @JsonProperty("caches_cleared")
-    private int cachesCleared;
-
     public CacheClearResponse() {
     }
 
-    public CacheClearResponse(boolean success, String message, int cachesCleared) {
+    public CacheClearResponse(boolean success, String message) {
         this.success = success;
         this.message = message;
-        this.cachesCleared = cachesCleared;
     }
 
     public boolean isSuccess() {
@@ -36,13 +32,5 @@ public class CacheClearResponse {
 
     public void setMessage(String message) {
         this.message = message;
-    }
-
-    public int getCachesCleared() {
-        return cachesCleared;
-    }
-
-    public void setCachesCleared(int cachesCleared) {
-        this.cachesCleared = cachesCleared;
     }
 }
