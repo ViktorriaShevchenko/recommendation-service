@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class ManagementController {
 
     private static final Logger log = LoggerFactory.getLogger(ManagementController.class);
-
     private final CacheManagementService cacheManagementService;
     private final BuildProperties buildProperties;
 
@@ -30,17 +29,16 @@ public class ManagementController {
     @PostMapping("/clear-caches")
     public ResponseEntity<CacheClearResponse> clearCaches() {
         try {
-            log.info("Получен запрос на очистку кешей");
+            log.info("Получен POST-запрос на очистку кешей");
 
-            int clearedCount = cacheManagementService.clearAllCaches();
+            cacheManagementService.clearAllCaches();
 
             CacheClearResponse response = new CacheClearResponse(
                     true,
-                    "All caches cleared successfully",
-                    clearedCount
+                    "All caches cleared successfully"
             );
 
-            log.info("Кеши очищены. Очищено: {}", clearedCount);
+            log.info("Кеши успешно очищены");
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
@@ -48,8 +46,7 @@ public class ManagementController {
 
             CacheClearResponse response = new CacheClearResponse(
                     false,
-                    "Failed to clear caches: " + e.getMessage(),
-                    0
+                    "Failed to clear caches: " + e.getMessage()
             );
 
             return ResponseEntity.internalServerError().body(response);
