@@ -1,0 +1,87 @@
+@startuml
+'===========================================
+' СЕРВИС РЕКОМЕНДАЦИЙ - ДИАГРАММА КОМПОНЕНТОВ
+'===========================================
+
+package "Recommendation Service" {
+
+  component "Telegram Bot" as TelegramBot {
+    component "RecommendationTelegramBot"
+    component "Telegram API Client"
+  }
+
+  component "Web API Layer" as WebAPI {
+    component "RecommendationController"
+    component "DynamicRuleController"
+    component "RuleStatsController"
+    component "ManagementController"
+  }
+
+  component "Business Logic Layer" as BusinessLogic {
+    component "RecommendationService" as RecService
+    component "DynamicRuleService"
+    component "RuleStatisticService"
+    component "UserService"
+    component "CacheManagementService"
+
+    package "Rule Engine" {
+      component "Fixed Rules" {
+        component "Invest500RuleSet"
+        component "TopSavingRuleSet"
+        component "SimpleCreditRuleSet"
+      }
+      component "Dynamic Rules Engine"
+      component "Condition Evaluators"
+    }
+  }
+
+  component "Data Access Layer" as DataAccess {
+    component "RecommendationsRepository"
+    component "DynamicRecommendationRepository"
+
+    database "H2 Database" as H2DB {
+      folder "Users Table"
+      folder "Products Table"
+      folder "Transactions Table"
+    }
+
+    database "PostgreSQL" as PostgresDB {
+      folder "Dynamic Rules Table"
+      folder "Issued Recommendations"
+      folder "Rule Statistics"
+    }
+  }
+
+  component "External Systems" as External {
+    component "Telegram API"
+    component "Client Applications"
+  }
+}
+
+' Связи между компонентами
+TelegramBot --> RecService : "запрашивает\nрекомендации"
+WebAPI --> BusinessLogic : "обрабатывает\nHTTP запросы"
+BusinessLogic --> DataAccess : "сохраняет/получает\nданные"
+External --> WebAPI : "REST API вызовы"
+External --> TelegramBot : "Telegram сообщения"
+
+H2DB --> RecommendationsRepository : "JDBC соединение"
+PostgresDB --> DynamicRecommendationRepository : "JPA/Hibernate"
+
+RecService --> "Fixed Rules" : "использует\nфиксированные правила"
+RecService --> "Dynamic Rules Engine" : "использует\nдинамические правила"
+"Dynamic Rules Engine" --> "Condition Evaluators" : "выполняет\nусловия"
+
+note right of H2DB
+  Read-only база данных
+  с транзакциями пользователей
+  и продуктами
+end note
+
+note right of PostgresDB
+  Read-write база данных
+  для динамических правил
+  и статистики
+end note
+
+@enduml

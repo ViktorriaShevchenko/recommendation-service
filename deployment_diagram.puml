@@ -1,0 +1,60 @@
+@startuml
+'===========================================
+' ДИАГРАММА РАЗВЕРТЫВАНИЯ
+' Архитектура развертывания сервиса
+'===========================================
+
+node "Клиентские устройства" as Clients {
+  component "Telegram App" as TelegramApp
+  component "Web Browser" as Browser
+  component "API Client" as APIClient
+}
+
+node "Сервер приложений" as AppServer {
+  artifact "Recommendation Service" as Service {
+    folder "Spring Boot Application" {
+      file "recommendation-service.jar"
+    }
+  }
+
+  database "H2 Database" as H2 {
+    folder "transaction.mv.db"
+  }
+}
+
+node "Сервер баз данных" as DBServer {
+  database "PostgreSQL" as PostgreSQL {
+    folder "recommendation_rules_db"
+    folder "dynamic_recommendation_rule"
+    folder "issued_recommendations"
+    folder "rule_statistics"
+  }
+}
+
+node "Внешние сервисы" as External {
+  cloud "Telegram API" as TelegramAPI
+}
+
+' Связи
+TelegramApp --> TelegramAPI : HTTPS/443
+TelegramAPI --> Service : Webhook / Updates
+Browser --> Service : HTTP/8080
+APIClient --> Service : REST API
+
+Service --> H2 : JDBC (чтение)
+Service --> PostgreSQL : JDBC/JPA (чтение/запись)
+
+note right of H2
+  Встроенная база данных
+  Только для чтения
+  Транзакции пользователей
+end note
+
+note left of PostgreSQL
+  Внешняя база данных
+  Чтение и запись
+  Динамические правила
+  Статистика
+end note
+
+@enduml

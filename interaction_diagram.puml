@@ -1,0 +1,59 @@
+@startuml
+'===========================================
+' ДИАГРАММА ВЗАИМОДЕЙСТВИЯ
+' Создание динамического правила через REST API
+'===========================================
+
+actor "Администратор" as Admin
+participant "Client Application" as Client
+participant "DynamicRuleController" as Controller
+participant "DynamicRuleService" as Service
+participant "DynamicRuleRepository" as Repository
+participant "RuleStatisticService" as StatsService
+participant "PostgreSQL" as DB
+
+Admin -> Client: Заполняет форму создания правила
+Client -> Controller: POST /rule (JSON)
+activate Controller
+
+Controller -> Controller: валидация запроса
+Controller -> Service: createRule(DynamicRuleRequest)
+activate Service
+
+Service -> Repository: existsByProductId(productId)
+activate Repository
+Repository -> DB: SELECT COUNT(*) FROM dynamic_recommendation_rule
+activate DB
+DB --> Repository: 0
+deactivate DB
+Repository --> Service: false
+deactivate Repository
+
+Service -> Service: создание DynamicRecommendationRule
+Service -> Repository: save(rule)
+activate Repository
+Repository -> DB: INSERT INTO dynamic_recommendation_rule
+activate DB
+DB --> Repository: сохраненная запись
+deactivate DB
+Repository --> Service: сохраненное правило
+deactivate Repository
+
+Service -> StatsService: createStatisticForRule(rule)
+activate StatsService
+StatsService -> StatsService: проверка существования статистики
+StatsService -> StatsService: создание RuleStatistic
+StatsService --> Service:
+deactivate StatsService
+
+Service -> Service: создание DynamicRuleResponse
+Service --> Controller: DynamicRuleResponse
+deactivate Service
+
+Controller -> Controller: создание ResponseEntity
+Controller --> Client: 200 OK с JSON ответом
+deactivate Controller
+
+Client -> Admin: Отображает "Правило успешно создано"
+
+@enduml

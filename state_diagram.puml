@@ -1,0 +1,60 @@
+@startuml
+'===========================================
+' ДИАГРАММА СОСТОЯНИЙ
+' Процесс выдачи рекомендации пользователю
+'===========================================
+
+state "Процесс рекомендации" as Process {
+
+  state "Начало запроса" as Start
+  state "Проверка пользователя" as CheckUser
+  state "Поиск фиксированных правил" as FindFixedRules
+  state "Поиск динамических правил" as FindDynamicRules
+  state "Проверка истории выдачи" as CheckHistory
+  state "Выдача рекомендации" as IssueRecommendation
+  state "Обновление статистики" as UpdateStats
+  state "Форматирование ответа" as FormatResponse
+  state "Конец" as End
+
+  state "Ошибка: Пользователь не найден" as ErrorUserNotFound
+  state "Ошибка: Нет рекомендаций" as ErrorNoRecommendations
+
+  [*] --> Start : "Запрос рекомендаций"
+  Start --> CheckUser : "Получение username/userId"
+
+  CheckUser --> ErrorUserNotFound : "Пользователь не существует"
+  CheckUser --> FindFixedRules : "Пользователь найден"
+
+  FindFixedRules --> FindDynamicRules : "Проверка завершена"
+
+  state FindDynamicRules {
+    state "Получение всех правил" as GetAllRules
+    state "Проверка условия" as CheckCondition
+    state "Условие выполнено" as ConditionMet
+    state "Условие не выполнено" as ConditionNotMet
+
+    GetAllRules --> CheckCondition : "Для каждого правила"
+    CheckCondition --> ConditionMet : "Условие истинно"
+    CheckCondition --> ConditionNotMet : "Условие ложно"
+    ConditionMet --> CheckHistory
+    ConditionNotMet --> GetAllRules : "Следующее правило"
+  }
+
+  CheckHistory --> IssueRecommendation : "Рекомендация еще не выдавалась"
+  CheckHistory --> FindDynamicRules : "Рекомендация уже выдавалась"
+
+  IssueRecommendation --> UpdateStats : "Рекомендация сохранена"
+  UpdateStats --> FindDynamicRules : "Продолжить проверку правил"
+
+  FindDynamicRules --> FormatResponse : "Все правила проверены"
+  FindFixedRules --> FormatResponse : "Нет динамических правил"
+
+  FormatResponse --> End : "Ответ сформирован"
+  FormatResponse --> ErrorNoRecommendations : "Не найдено подходящих правил"
+
+  ErrorUserNotFound --> [*] : "Завершение с ошибкой"
+  ErrorNoRecommendations --> [*] : "Завершение с сообщением"
+  End --> [*] : "Успешное завершение"
+}
+
+@enduml
