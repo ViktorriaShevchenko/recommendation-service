@@ -1,0 +1,30 @@
+@startuml
+left to right direction
+
+actor "Пользователь" as User
+actor "Менеджер" as Manager
+actor "Внешняя система" as External
+actor "Администратор" as Admin
+
+User <|-- Manager
+User <|-- Admin
+
+rectangle "Сервис рекомендаций" {
+  usecase "UC-01: Получить рекомендации\nчерез REST API" as UC1
+  usecase "UC-02: Получить рекомендации\nчерез Telegram Bot" as UC2
+  usecase "UC-03: Управлять динамическими\nправилами" as UC3
+  usecase "UC-04: Просматривать статистику\nправил" as UC4
+  usecase "UC-05: Сбрасывать кэш" as UC5
+  usecase "UC-06: Получать информацию\nо сборке" as UC6
+
+  User --> UC1
+  User --> UC2
+  Manager --> UC3
+  Manager --> UC4
+  External --> UC5
+  Admin --> UC6
+
+  UC3 .> UC4 : includes
+  UC1 .> UC2 : extends
+}
+@enduml
