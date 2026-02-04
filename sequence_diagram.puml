@@ -1,0 +1,115 @@
+@startuml
+'===========================================
+' ДИАГРАММА ПОСЛЕДОВАТЕЛЬНОСТИ
+' Получение рекомендаций через Telegram бота
+'===========================================
+
+actor User as User
+participant "Telegram" as Telegram
+participant "RecommendationTelegramBot" as Bot
+participant "UserService" as UserService
+participant "RecommendationService" as RecService
+participant "RecommendationsRepository" as RecRepo
+participant "DynamicRuleRepository" as DynRuleRepo
+participant "ConditionEvaluatorService" as CondEval
+participant "DynamicRecommendationRepository" as DynRecRepo
+participant "RuleStatisticService" as RuleStats
+
+User -> Telegram: Отправляет /recommend ivanov
+Telegram -> Bot: onUpdateReceived()
+activate Bot
+
+Bot -> Bot: handleRecommendCommand()
+Bot -> UserService: findSingleUserIdByUsername("ivanov")
+activate UserService
+UserService -> RecRepo: findSingleUserIdByUsername()
+activate RecRepo
+RecRepo --> UserService: userId (UUID)
+deactivate RecRepo
+UserService --> Bot: Optional<userId>
+deactivate UserService
+
+Bot -> RecService: getRecommendationsForUser(userId)
+activate RecService
+
+' Шаг 1: Проверка фиксированных правил
+RecService -> RecService: проверка фиксированных правил
+loop Для каждого фиксированного правила
+  RecService -> "FixedRuleSet": check(userId)
+  activate "FixedRuleSet"
+  "FixedRuleSet" -> RecRepo: проверка условий
+  activate RecRepo
+  RecRepo --> "FixedRuleSet": результаты
+  deactivate RecRepo
+  "FixedRuleSet" --> RecService: Optional<RecommendationDTO>
+  deactivate "FixedRuleSet"
+
+  alt рекомендация найдена
+    RecService -> DynRecRepo: isAlreadyIssued(userId, recId)
+    activate DynRecRepo
+    DynRecRepo --> RecService: false (не выдавалась)
+    deactivate DynRecRepo
+
+    RecService -> DynRecRepo: save(userId, recId, name, text)
+    activate DynRecRepo
+    DynRecRepo --> RecService
+    deactivate DynRecRepo
+  end
+end
+
+' Шаг 2: Проверка динамических правил
+RecService -> DynRuleRepo: findAll()
+activate DynRuleRepo
+DynRuleRepo --> RecService: List<DynamicRecommendationRule>
+deactivate DynRuleRepo
+
+loop Для каждого динамического правила
+  RecService -> RecService: isRuleApplicable(rule, userId)
+  RecService -> CondEval: evaluateCondition(condition, userId, repository)
+  activate CondEval
+  CondEval -> RecRepo: проверка условия (например, hasProduct())
+  activate RecRepo
+  RecRepo --> CondEval: результат
+  deactivate RecRepo
+  CondEval --> RecService: true/false
+  deactivate CondEval
+
+  alt правило применимо
+    RecService -> DynRecRepo: isAlreadyIssued(userId, productId)
+    activate DynRecRepo
+    DynRecRepo --> RecService: false
+    deactivate DynRecRepo
+
+    RecService -> DynRecRepo: save(userId, productId, name, text)
+    activate DynRecRepo
+    DynRecRepo --> RecService
+    deactivate DynRecRepo
+
+    RecService -> RuleStats: incrementStatistic(ruleId)
+    activate RuleStats
+    RuleStats --> RecService
+    deactivate RuleStats
+  end
+end
+
+RecService --> Bot: RecommendationResponse
+deactivate RecService
+
+Bot -> UserService: getUserFullName(userId)
+activate UserService
+UserService -> RecRepo: getUserFullName()
+activate RecRepo
+RecRepo --> UserService: "Иван Иванов"
+deactivate RecRepo
+UserService --> Bot: "Иван Иванов"
+deactivate UserService
+
+Bot -> Bot: форматирование ответа
+Bot -> Telegram: sendMessage(отформатированный ответ)
+activate Telegram
+Telegram --> User: Отображает рекомендации
+deactivate Telegram
+
+deactivate Bot
+
+@enduml

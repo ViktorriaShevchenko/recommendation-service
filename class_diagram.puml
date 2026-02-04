@@ -1,0 +1,375 @@
+plantuml
+@startuml
+'===========================================
+' СЕРВИС РЕКОМЕНДАЦИЙ - ДИАГРАММА КЛАССОВ
+'===========================================
+
+package "com.starbank.recommendation_service" {
+
+  package "bot" {
+    class RecommendationTelegramBot {
+      - botToken: String
+      - botUsername: String
+      - recommendationService: RecommendationService
+      - userService: UserService
+      + onUpdateReceived(update: Update): void
+      - handleRecommendCommand(chatId: Long, command: String): void
+      - sendGreetingMessage(chatId: Long): void
+      - sendHelpMessage(chatId: Long): void
+      - sendMessage(chatId: Long, text: String): void
+    }
+  }
+
+  package "configuration" {
+    class DynamicRulesDataSourceConfiguration {
+      + dynamicRulesDataSource(): DataSource
+      + dynamicRulesEntityManagerFactory(): LocalContainerEntityManagerFactoryBean
+      + dynamicRulesTransactionManager(): PlatformTransactionManager
+      + dynamicRulesLiquibase(): SpringLiquibase
+    }
+
+    class RecommendationsDataSourceConfiguration {
+      + recommendationsDataSource(): DataSource
+      + recommendationsJdbcTemplate(): JdbcTemplate
+    }
+
+    class TelegramBotConfig {
+      + telegramBotsApi(): TelegramBotsApi
+      + recommendationBot(): RecommendationTelegramBot
+    }
+  }
+
+  package "controller" {
+    class DynamicRuleController {
+      - dynamicRuleService: DynamicRuleService
+      + createRule(request: DynamicRuleRequest): ResponseEntity<DynamicRuleResponse>
+      + getAllRules(): ResponseEntity<List<DynamicRuleResponse>>
+      + deleteRule(productId: UUID): ResponseEntity<Void>
+    }
+
+    class ManagementController {
+      - cacheManagementService: CacheManagementService
+      - buildProperties: BuildProperties
+      + clearCaches(): ResponseEntity<CacheClearResponse>
+      + getBuildInfo(): ResponseEntity<BuildInfoResponse>
+    }
+
+    class RecommendationController {
+      - recommendationService: RecommendationService
+      + getRecommendations(userId: UUID): ResponseEntity<RecommendationResponse>
+      + handleValidationExceptions(): ResponseEntity<String>
+    }
+
+    class RuleStatsController {
+      - ruleStatisticService: RuleStatisticService
+      + getAllRulesStatistics(): ResponseEntity<RuleStatsResponse>
+    }
+  }
+
+  package "dto" {
+    class RecommendationDTO {
+      - id: UUID
+      - name: String
+      - text: String
+      + RecommendationDTO()
+      + RecommendationDTO(name: String, text: String)
+      + RecommendationDTO(id: UUID, name: String, text: String)
+    }
+
+    class RecommendationResponse {
+      - userId: UUID
+      - recommendations: List<RecommendationDTO>
+      + RecommendationResponse()
+      + RecommendationResponse(userId: UUID, recommendations: List<RecommendationDTO>)
+    }
+
+    class IssuedRecommendationDTO {
+      - userId: UUID
+      - recommendationId: UUID
+      - issuedAt: LocalDateTime
+    }
+
+    class RuleStatResponseDTO {
+      - ruleId: UUID
+      - count: Long
+    }
+
+    class RuleStatsResponse {
+      - stats: List<RuleStatResponseDTO>
+    }
+
+    class BuildInfoResponse {
+      - name: String
+      - version: String
+    }
+
+    class CacheClearResponse {
+      - success: boolean
+      - message: String
+    }
+
+    package "dynamic" {
+      class DynamicRuleRequest {
+        - productName: String
+        - productId: UUID
+        - productText: String
+        - rule: List<RuleCondition>
+      }
+
+      class DynamicRuleResponse {
+        - id: UUID
+        - productName: String
+        - productId: UUID
+        - productText: String
+        - rule: List<RuleCondition>
+        + DynamicRuleResponse(entity: DynamicRecommendationRule)
+      }
+    }
+  }
+
+  package "entity" {
+    class ProductType <<enumeration>> {
+      DEBIT
+      CREDIT
+      SAVING
+      INVEST
+    }
+
+    class TransactionType <<enumeration>> {
+      DEPOSIT
+      WITHDRAW
+    }
+
+    package "dynamic" {
+      class DynamicRecommendationRule {
+        - id: UUID
+        - productName: String
+        - productId: UUID
+        - productText: String
+        - rule: List<RuleCondition>
+        - statistics: List<RuleStatistic>
+      }
+
+      class RuleCondition {
+        - query: String
+        - arguments: List<String>
+        - negate: boolean
+      }
+
+      class IssuedRecommendation {
+        - id: UUID
+        - userId: UUID
+        - recommendationId: UUID
+        - issuedAt: LocalDateTime
+        - productName: String
+        - productText: String
+        + create(): IssuedRecommendation
+      }
+
+      class RuleStatistic {
+        - id: Long
+        - rule: DynamicRecommendationRule
+        - count: Long
+        - lastTriggeredAt: LocalDateTime
+        - createdAt: LocalDateTime
+        - updatedAt: LocalDateTime
+        + increment(): void
+      }
+    }
+  }
+
+  package "repository" {
+    class RecommendationsRepository {
+      - recommendationsJdbcTemplate: JdbcTemplate
+      - userOfCache: Cache<String, Boolean>
+      - activeUserOfCache: Cache<String, Boolean>
+      - transactionSumCache: Cache<String, Integer>
+      - userIdCache: Cache<String, UUID>
+      - userFullNameCache: Cache<String, String>
+      + hasProduct(userId: UUID, productType: ProductType): boolean
+      + hasActiveProduct(userId: UUID, productType: ProductType): boolean
+      + transactionSumAndTypeForProductType(): int
+      + findSingleUserIdByUsername(username: String): Optional<UUID>
+      + getUserFullName(userId: UUID): String
+      + clearAllCaches(): void
+    }
+
+    class DynamicRecommendationRepository {
+      - issuedRecommendationRepository: IssuedRecommendationRepository
+      + save(): void
+      + isAlreadyIssued(): boolean
+      + getIssuedRecommendations(): List<IssuedRecommendationDTO>
+      + clearUserRecommendations(): void
+      + clearRecommendationIssues(): void
+    }
+
+    package "dynamic" {
+      interface DynamicRuleRepository {
+        + findAll(): List<DynamicRecommendationRule>
+        + deleteByProductId(productId: UUID): void
+        + existsByProductId(productId: UUID): boolean
+        + findByProductId(productId: UUID): Optional<DynamicRecommendationRule>
+      }
+
+      interface IssuedRecommendationRepository {
+        + findByUserIdAndRecommendationId(): Optional<IssuedRecommendation>
+        + existsByUserIdAndRecommendationId(): boolean
+        + findByUserId(userId: UUID): List<IssuedRecommendation>
+        + deleteByUserId(userId: UUID): int
+        + deleteByRecommendationId(recommendationId: UUID): int
+      }
+
+      interface RuleStatisticRepository {
+        + findByRuleId(ruleId: UUID): Optional<RuleStatistic>
+        + incrementCountByRuleId(ruleId: UUID): int
+        + deleteByRuleId(ruleId: UUID): int
+        + existsByRuleId(ruleId: UUID): boolean
+      }
+    }
+  }
+
+  package "service" {
+    class RecommendationService {
+      - ruleSets: List<RecommendationRuleSet>
+      - dynamicRuleRepository: DynamicRuleRepository
+      - recommendationsRepository: RecommendationsRepository
+      - dynamicRecommendationRepository: DynamicRecommendationRepository
+      - conditionEvaluatorService: ConditionEvaluatorService
+      - ruleStatisticService: RuleStatisticService
+      + getRecommendationsForUser(userId: UUID): RecommendationResponse
+      - isRuleApplicable(): boolean
+      - evaluateCondition(): boolean
+      - convertToRecommendationDTO(): RecommendationDTO
+    }
+
+    class UserService {
+      - recommendationsRepository: RecommendationsRepository
+      + findSingleUserIdByUsername(username: String): Optional<UUID>
+      + getUserFullName(userId: UUID): String
+    }
+
+    class CacheManagementService {
+      - recommendationsRepository: RecommendationsRepository
+      + clearAllCaches(): void
+    }
+
+    class RuleStatisticService {
+      - ruleStatisticRepository: RuleStatisticRepository
+      - dynamicRuleRepository: DynamicRuleRepository
+      + incrementStatistic(ruleId: UUID): void
+      + createStatisticForRule(rule: DynamicRecommendationRule): void
+      + getStatisticByRuleId(ruleId: UUID): RuleStatistic
+      + deleteStatisticByRuleId(ruleId: UUID): void
+      + getAllRulesStatistics(): RuleStatsResponse
+    }
+
+    package "dynamic" {
+      class DynamicRuleService {
+        - repository: DynamicRuleRepository
+        - ruleStatisticService: RuleStatisticService
+        + createRule(request: DynamicRuleRequest): DynamicRuleResponse
+        + getAllRules(): List<DynamicRuleResponse>
+        + deleteRuleByProductId(productId: UUID): void
+      }
+    }
+
+    package "rule" {
+      interface RecommendationRuleSet {
+        + check(userId: UUID): Optional<RecommendationDTO>
+      }
+
+      class Invest500RuleSet {
+        - repository: RecommendationsRepository
+        + check(userId: UUID): Optional<RecommendationDTO>
+      }
+
+      class TopSavingRuleSet {
+        - repository: RecommendationsRepository
+        + check(userId: UUID): Optional<RecommendationDTO>
+      }
+
+      class SimpleCreditRuleSet {
+        - repository: RecommendationsRepository
+        + check(userId: UUID): Optional<RecommendationDTO>
+      }
+    }
+
+    package "rule.condition" {
+      interface ConditionEvaluator {
+        + supports(queryType: String): boolean
+        + evaluate(): boolean
+      }
+
+      class UserOfConditionEvaluator {
+        + supports(queryType: String): boolean
+        + evaluate(): boolean
+      }
+
+      class ActiveUserOfConditionEvaluator {
+        + supports(queryType: String): boolean
+        + evaluate(): boolean
+      }
+
+      class TransactionSumCompareConditionEvaluator {
+        + supports(queryType: String): boolean
+        + evaluate(): boolean
+      }
+
+      class TransactionSumCompareDepositWithdrawEvaluator {
+        + supports(queryType: String): boolean
+        + evaluate(): boolean
+      }
+
+      class ConditionEvaluatorService {
+        - evaluators: List<ConditionEvaluator>
+        + evaluateCondition(): boolean
+        - findEvaluator(): ConditionEvaluator
+      }
+    }
+  }
+}
+
+' Связи между классами
+RecommendationTelegramBot --> RecommendationService
+RecommendationTelegramBot --> UserService
+RecommendationController --> RecommendationService
+DynamicRuleController --> DynamicRuleService
+RuleStatsController --> RuleStatisticService
+ManagementController --> CacheManagementService
+
+RecommendationService --> DynamicRuleRepository
+RecommendationService --> RecommendationsRepository
+RecommendationService --> DynamicRecommendationRepository
+RecommendationService --> ConditionEvaluatorService
+RecommendationService --> RuleStatisticService
+RecommendationService --> RecommendationRuleSet
+
+DynamicRuleService --> DynamicRuleRepository
+DynamicRuleService --> RuleStatisticService
+
+RuleStatisticService --> RuleStatisticRepository
+RuleStatisticService --> DynamicRuleRepository
+
+UserService --> RecommendationsRepository
+CacheManagementService --> RecommendationsRepository
+
+Invest500RuleSet --> RecommendationsRepository
+TopSavingRuleSet --> RecommendationsRepository
+SimpleCreditRuleSet --> RecommendationsRepository
+
+ConditionEvaluatorService --> ConditionEvaluator
+UserOfConditionEvaluator ..|> ConditionEvaluator
+ActiveUserOfConditionEvaluator ..|> ConditionEvaluator
+TransactionSumCompareConditionEvaluator ..|> ConditionEvaluator
+TransactionSumCompareDepositWithdrawEvaluator ..|> ConditionEvaluator
+
+DynamicRecommendationRepository --> IssuedRecommendationRepository
+DynamicRuleRepository <|.. "JpaRepository"
+IssuedRecommendationRepository <|.. "JpaRepository"
+RuleStatisticRepository <|.. "JpaRepository"
+
+RecommendationRuleSet <|.. Invest500RuleSet
+RecommendationRuleSet <|.. TopSavingRuleSet
+RecommendationRuleSet <|.. SimpleCreditRuleSet
+
+@enduml
