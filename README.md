@@ -77,7 +77,26 @@ src/main/java/com/starbank/recommendation_service/
 ```
 
 ---
+##  Подготовка к запуску
 
+### База данных с транзакциями
+
+Перед запуском скачайте файл базы данных:
+
+ [**Скачать transaction.mv.db**](https://drive.google.com/file/d/1f9EVHCbXXU71Ds8tgfKEJuBxr0eGZTqy/edit)
+
+Поместите файл в **корневую папку проекта** (рядом с `pom.xml`).
+
+>  Файл не включён в репозиторий из-за большого размера. Без него приложение не сможет работать.
+
+### Секретные настройки
+
+Создайте файл `secrets.properties` в корне проекта:
+
+```properties
+telegram.bot.token=ваш_токен_бота
+telegram.bot.username=ваш_username_бота
+```
 ##  Быстрый старт
 
 ### Предварительные требования
